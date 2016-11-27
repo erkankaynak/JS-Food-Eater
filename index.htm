@@ -1,0 +1,226 @@
+<html>
+	<head>
+		<title></title>
+		<style type="text/css">
+		    body {background-color:Black;}
+            H1 {font-family:Arial; font-size:16px; text-align:center; color:Blue; }
+			.divGameScreen {border:solid 5px silver; width:800px; height:416px; padding:10px; position:relative; margin:auto; background:url('images/bg_0.png');}
+            .score {position:absolute; font-size:15px; font-weight:bold; left:70px; color:yellow;}
+            .combo {position:absolute; font-size:15px; font-weight:bold; left:70px; color:white;}
+            .great {position:absolute; font-size:15px; font-weight:bold; left:70px; color:red;}
+		</style>
+        <script src="scripts/jquery-1.5.1.min.js" type="text/javascript"></script>
+		<script type="text/javascript">
+
+		    var activeFruitNo = 0;
+            var keyUp, keyDown
+            // HUNTER PROPERTIES ----------------
+		    var hunterCurrentY = 6 * 32;
+		    var hunterFrame = 0;
+		    var hunterLives = 0;
+		    var hunterScore = 0;
+		    var comboTimer = 0;
+		    var COMBO_TIME = 120;
+		    // -----------------------------------
+
+		    var arrFruits = new Array(8);
+		    var arrScores = new Array(10);
+		    var arrAnime = new Array(10);
+
+		    for (i = 0; i < arrFruits.length; i++) arrFruits[i] = 0;
+		    
+		    function fruit(fType, X, Y, Speed) {
+		        this.fType = fType;
+		        this.X = X;
+		        this.Y = Y;
+		        this.Speed = Speed;
+		        this.active = 1;
+		        this.run = 0;
+		    }
+		    function score(Y,points) {
+		        this.Y = Y;
+		        this.points = points;
+		        this.timer = 20;
+		    }
+		    function anime(aType, X, Y, text) {
+		        this.aType = aType;
+		        this.X = X;
+		        this.Y = Y;
+		        this.text = text;
+		        this.active = 1;
+		        this.timer = 20;
+                this.style="";
+		        switch (aType) {
+		            case 0: this.style = "score"; break;
+		            case 1: this.style = "combo"; break;
+		            case 2: this.style = "great"; break;
+		        }
+		        
+		    }
+		    function drawFruit(f) {
+		        var str = "<img src='images/" + f.fType + ".png' style='position:absolute; top:" + f.Y  + "px; left:" + f.X + "px'>";
+		        return str;
+		    }
+
+
+		    function jsMainLoop() {
+		        var html = "";
+
+		        //DRAW HUNTER
+		        if (keyDown == true) if (hunterCurrentY<416-32) hunterCurrentY += 2;
+		        if (keyUp == true) if (hunterCurrentY>30) hunterCurrentY -= 2;
+
+		        if (hunterFrame < 50) hunterFrame++;
+		        else hunterFrame = 0;
+
+		        var hunterImage = "0";
+		        if (hunterFrame > 25) hunterImage = "1";
+		        html += "<img src='images/hunter_" + hunterImage + ".png' style='position:absolute; top:" + hunterCurrentY + "px; left:32px;'/> ";
+		        //--------------
+
+		        for (i = 0; i < arrFruits.length; i++) {
+                    var mF = arrFruits[i];
+
+                    if (mF.active == 1) {
+                        mF.run++;
+                        if (mF.run == mF.Speed) {
+                            mF.X -= 5;
+                            mF.run = 0;
+                        }
+                        var conclusion = true;
+                        if (mF.Y <= hunterCurrentY - 32 || mF.Y >= hunterCurrentY + 32) conclusion = false;
+                        if (mF.X < -5 || mF.X > 64) conclusion = false;
+
+                        if (conclusion==true) {
+                            if (mF.X > 27 && mF.X <= 59) {
+                                arrScores[i] = newScore(i, mF.Y, 10 - mF.Speed);
+                                comboTimer += 100;
+                                mF.active = 0;
+                                arrFruits[i] = newFruit();
+
+                                if (comboTimer >= 120) {
+                                    arrAnime[i] = newAnime(1, 70, mF.Y, "COMBO! ");
+                                    comboTimer = 119;
+                                }
+                            }
+                        }
+
+                        if (mF.X < 0) {
+                            mF.active = 0;
+                            arrFruits[i] = newFruit();
+                        }
+
+                        if (arrFruits[i].active == 1) html += drawFruit(arrFruits[i]);
+
+                        // Draw Scores
+                        if (arrScores[i].points != 0) {
+                            if (arrScores[i].timer > 0) {
+                                arrScores[i].timer--;
+                                html += "<div class='score' style='top:" + (arrScores[i].Y-10) + "px;font-size:" + (8+arrScores[i].timer) + "px'> +" + arrScores[i].points + "</div>";
+                            }
+                            else {
+                                arrScores[i].points = 0;
+                            }
+                        }
+                        // Draw Animations
+                        if (arrAnime[i].active == 1) {
+                            if (arrAnime[i].timer > 0) {
+                                arrAnime[i].timer--;
+                                html += "<div class='" + arrAnime[i].style + "' style='top:" + arrAnime[i].Y  + "px;font-size:13px'>" + arrAnime[i].text + "</div>";
+                            }
+                            else {
+                                arrAnime[i].active = 0;
+                            }
+                        }
+                    }
+                }
+                //Combo Timer
+                $("#divComboTimer").html(comboTimer);
+                if (comboTimer > 0) comboTimer--;
+                if (comboTimer > 116) html += "<div style='position:absolute;padding:10px; width:100%;height:100%; background-color:red;z-index:0; left:-10;top:-10'> ERKAN </div>"
+                
+		        document.getElementById("divGameScreen").innerHTML = html; ;
+		    }
+
+		    function getY() {
+		        var Y = Math.round(Math.random() * 11) + 1;
+		        for (a = 0; a < arrFruits.length; a++) {
+		                if (arrFruits[a] != 0) {
+		                if (arrFruits[a].active == 1 && arrFruits[a].Y == Y*32) {
+		                    Y = getY();
+    		            }
+		            }
+                }
+		        return Y;
+		    }
+
+		    function newFruit() {
+		        var Y = getY()*32;
+		        var fSpeed = Math.round(Math.random() * 6) + 2;
+		        var fType = Math.round(Math.random() * 7) + 1;
+		        var fNew = new fruit(fType, 800, Y, fSpeed);
+
+		        return fNew;
+		    }
+
+		    function newScore(sT, Y, points) {
+		        var newScore = new score(Y, points);
+		        hunterScore += points * 1;
+		        document.getElementById("divScore").innerHTML = "Score : <font color=white>" + hunterScore + "</font>";
+		        return newScore;
+		    }
+		    function newAnime(aType, X, Y, Text) {
+		        var newAnime = new anime(aType, X, Y, Text);
+		        return newAnime;
+		    }
+
+		    function jsKeyDown(e) {
+		        console.log(e.keyCode);
+		        switch (e.keyCode) {
+		            case 40: keyDown = true; break;
+		            case 38: keyUp = true; break;
+		        }
+		    }
+
+		    function jsKeyUp(e) {
+		        keyDown = false;
+		        keyUp = false;
+		        console.log(e.keyCode);
+		    }
+		    window.onload = function () {
+
+//		        $(document).keydown(function (e) {
+//		            console.log(e.which);
+//		            switch (e.which) {
+//		                case 38: hunterTargetY -= 32; break;
+//		                case 40: hunterTargetY += 32; break;
+//		            }
+//		        });
+
+		        window.addEventListener('keydown', jsKeyDown);
+		        window.addEventListener('keyup', jsKeyUp); 
+
+//		        $("#divGameScreen").click(function (e) {
+//		            var erko = e.pageY - $(this).offset().top
+//		            hunterTargetY = erko;
+//		            console.log(erko);
+//		        });
+		        for (i = 0; i < arrFruits.length; i++) arrFruits[i] = newFruit();
+		        for (s = 0; s < arrScores.length; s++) arrScores[s] = newScore(s, 0, 0);
+		        for (a = 0; a < arrAnime.length; a++) arrAnime[a] = newAnime(-1, -1, -1, "GO!");
+
+		        setInterval(jsMainLoop, 1);
+
+		    };
+
+		</script>
+	</head>
+	<body>
+    <h1>Fruit Hunter</h1>
+	<div id="divGameScreen" class="divGameScreen">
+    <img src="images/hunter_0.png" /><img src="images/hunter_1.png" />
+    </div>
+    <div id="divScore" style="margin:auto; color:Red; font-size:14px; text-align:center;"></div>
+    <div id="divComboTimer" style="color:Yellow">000</div>asdf
+	</body>
+</html>
